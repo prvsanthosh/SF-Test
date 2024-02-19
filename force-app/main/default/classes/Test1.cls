@@ -1,5 +1,5 @@
 public with sharing class Test1 {
-    //config 
+    //config jwt
     public Test1() {
 
     }
