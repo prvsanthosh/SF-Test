@@ -37,7 +37,7 @@ jobs:
           mkdir delta
           sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output delta/ -i .forceignore
           echo "--- package.xml generated with added and modified metadata ---"
-          cat package/package.xml
+          cat delta/package/package.xml
       
       - name: Deploy delta components to Salesforce
         run: |
