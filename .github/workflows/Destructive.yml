@@ -1,0 +1,44 @@
+name: Sample Pipeline
+run-name: ${{ github.actor }} is running pipeline on ${{ github.repository }}
+on: 
+  pull_request:
+    types: [closed]
+    branches:
+      - main     
+jobs: 
+  build:
+    runs-on: ubuntu-latest
+    environment: Production Dev Org
+    steps:
+      # Checkout the Source code from the latest commit
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Install NPM
+        run: |
+          npm install
+      # Install the SFDX CLI using npm command
+      - name: Install the SFDX CLI
+        run: |
+          npm install sfdx-cli --global
+          sfdx force --help
+          
+      - name: Install the sfdx-git-delta plugin
+        run: |
+          echo 'y' | sfdx plugins:install sfdx-git-delta
+          
+      - name: Authenticate Salesforce ORG
+        run: |
+          sfdx force:auth:jwt:grant --clientid ${{ secrets.HUB_CONSUMER_KEY }} --jwtkeyfile  ${{ secrets.JWT_KEY_FILE }} --username ${{ secrets.HUB_USER_NAME }} --setdefaultdevhubusername -a HubOrg --instanceurl ${{ secrets.HUB_LOGIN_URL }} 
+      
+      - name: Generate the package.xml for delta files
+        run: |
+          mkdir delta
+          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output delta/ -i .forceignore
+          echo "--- package.xml generated with added and modified metadata ---"
+          cat package/package.xml
+      
+      - name: Deploy Delta components to Salesforce
+        run: |
+          sfdx force:source:deploy -x package/package.xml --postdestructivechanges destructiveChanges/destructiveChanges.xml -u ${{ secrets.HUB_USER_NAME }}
