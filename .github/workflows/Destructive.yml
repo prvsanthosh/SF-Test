@@ -41,4 +41,4 @@ jobs:
       
       - name: Deploy delta components to Salesforce
         run: |
-          sfdx force:source:deploy -x package/package.xml --postdestructivechanges destructiveChanges/destructiveChanges.xml -u vsanthosh@resilient-otter-go0gxs.com
+          sfdx force:source:deploy -x delta/package/package.xml --postdestructivechanges destructiveChanges/destructiveChanges.xml -u vsanthosh@resilient-otter-go0gxs.com
