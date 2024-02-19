@@ -32,13 +32,13 @@ jobs:
         run: |
           sfdx force:auth:jwt:grant --clientid 3MVG9pRzvMkjMb6mkMsAy61yRTBStzZUxz8ifciP17hhwIzNNwgQ3yyeiU1po2LofYkP3iyHZM24dz5aCmM5_ --jwtkeyfile assets/server.key --username vsanthosh@resilient-otter-go0gxs.com --setdefaultdevhubusername -a HubOrg --instanceurl https://login.salesforce.com     
 
-      - name: Generate the package.xml for result files
+      - name: Generate the package.xml for delta files
         run: |
-          mkdir result
-          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output result/ -i .forceignore
+          mkdir delta
+          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output delta/ -i .forceignore
           echo "--- package.xml generated with added and modified metadata ---"
           cat package/package.xml
       
-      - name: Deploy Result components to Salesforce
+      - name: Deploy delta components to Salesforce
         run: |
           sfdx force:source:deploy -x package/package.xml --postdestructivechanges destructiveChanges/destructiveChanges.xml -u ${{ secrets.HUB_USER_NAME }}
