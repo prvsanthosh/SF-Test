@@ -1,5 +1,5 @@
 public with sharing class Test1 {
-    //Test classes 
+    //config
     public Test1() {
 
     }
