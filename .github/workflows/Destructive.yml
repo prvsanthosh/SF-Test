@@ -35,10 +35,17 @@ jobs:
       - name: Generate the package.xml for delta files
         run: |
           mkdir delta
-          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output delta/ -i .forceignore
+          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output "." -i .forceignore
           echo "--- package.xml generated with added and modified metadata ---"
-          cat delta/package/package.xml
-      
+          cat package/package.xml
+
+      - name: Generate the destructiveChanges.xml for delta files
+        run: |
+          mkdir delta
+          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output "." -n destructiveChanges/destructiveChanges.xml -i .forceignore
+          echo "--- destructiveChanges.xml generated with added and modified metadata ---"
+          cat destructiveChanges/destructiveChanges.xml
+
       - name: Deploy delta components to Salesforce
         run: |
           sfdx force:source:deploy -x delta/package/package.xml --postdestructivechanges destructiveChanges/destructiveChanges.xml -u vsanthosh@resilient-otter-go0gxs.com
