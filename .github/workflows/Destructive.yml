@@ -34,14 +34,12 @@ jobs:
 
       - name: Generate the package.xml for delta files
         run: |
-          mkdir delta
           sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output "." -i .forceignore
           echo "--- package.xml generated with added and modified metadata ---"
           cat package/package.xml
 
       - name: Generate the destructiveChanges.xml for delta files
         run: |
-          mkdir delta
           sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output "." -n destructiveChanges/destructiveChanges.xml -i .forceignore
           echo "--- destructiveChanges.xml generated with added and modified metadata ---"
           cat destructiveChanges/destructiveChanges.xml
