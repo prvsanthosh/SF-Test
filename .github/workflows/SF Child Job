@@ -1,0 +1,44 @@
+name: Salesforce Deployment Checker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Run every 5 minutes
+
+jobs:
+  deployment_checker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Salesforce CLI
+        run: |
+          # Install Salesforce CLI here
+
+      - name: Login to Salesforce
+        run: |
+          # Salesforce login steps here
+
+      - name: Check Deployment Status
+        id: deployment_status
+        run: |
+          # Command to check deployment status
+          # Example: sfdx force:mdapi:deploy:report -i <deployment_id> --json
+          # Store the deployment status in an output variable
+          echo "::set-output name=status::success"  # Replace 'success' with actual status
+
+      - name: Wait for 5 minutes
+        run: sleep 300
+
+      - name: Check Deployment Status Again
+        if: steps.deployment_status.outputs.status != 'success'
+        run: |
+          # Command to check deployment status again if the previous check failed
+          # Store the deployment status in an output variable again if needed
+          echo "::set-output name=status::success"  # Replace 'success' with actual status
+
+      - name: Final Deployment Status
+        run: |
+          # Notify or perform any actions based on the final deployment status
+          echo "Deployment Status: ${{ steps.deployment_status.outputs.status }}"
