@@ -3,10 +3,20 @@ name: Salesforce Deployment Checker
 on:
   schedule:
     - cron: '*/5 * * * *'  # Run every 5 minutes
+  push:
+    branches-ignore:
+      - '*'  # Ignore pushes to branches
+    tags-ignore:
+      - '*'  # Ignore pushes to tags
+  pull_request:
+    branches-ignore:
+      - '*'  # Ignore pull requests to branches
+    tags-ignore:
+      - '*'  # Ignore pull requests to tags
 
 jobs:
   deployment_checker:
-  if: github.actor == 'subramanyamkamath'
+    if: github.actor == 'subramanyamkamath'
     runs-on: ubuntu-latest
 
     steps:
@@ -15,19 +25,19 @@ jobs:
 
       - name: Install Salesforce CLI
         run: |
-          # Install Salesforce CLI here
+          wget https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz
+          mkdir sfdx-cli
+          tar xJf sfdx-linux-amd64.tar.xz -C sfdx-cli --strip-components 1
+          sudo ./sfdx-cli/install
 
       - name: Login to Salesforce
         run: |
-          # Salesforce login steps here
+          sfdx force:auth:jwt:grant --clientid ${{ secrets.SALESFORCE_CLIENT_ID }} --jwtkeyfile server.key --username ${{ secrets.SALESFORCE_USERNAME }} --setdefaultdevhubusername --setalias my-hub-org
 
       - name: Check Deployment Status
         id: deployment_status
         run: |
-          # Command to check deployment status
-          # Example: sfdx force:mdapi:deploy:report -i <deployment_id> --json
-          # Store the deployment status in an output variable
-          echo "::set-output name=status::success"  # Replace 'success' with actual status
+          sfdx force:mdapi:deploy:report -i <deployment_id> --json > deployment_status.json
 
       - name: Wait for 5 minutes
         run: sleep 300
@@ -35,11 +45,8 @@ jobs:
       - name: Check Deployment Status Again
         if: steps.deployment_status.outputs.status != 'success'
         run: |
-          # Command to check deployment status again if the previous check failed
-          # Store the deployment status in an output variable again if needed
-          echo "::set-output name=status::success"  # Replace 'success' with actual status
+          sfdx force:mdapi:deploy:report -i <deployment_id> --json > deployment_status.json
 
       - name: Final Deployment Status
         run: |
-          # Notify or perform any actions based on the final deployment status
           echo "Deployment Status: ${{ steps.deployment_status.outputs.status }}"
