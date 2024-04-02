@@ -1,44 +1,37 @@
-name: Salesforce Deployment Checker
+name: Deployment Status Check
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Run every 5 minutes
+    - cron: '*/5 * * * *'
 
 jobs:
-  deployment_checker:
+  check-deployment-status:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Set up Salesforce CLI
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+          registry-url: 'https://npm.pkg.github.com'
       - name: Install Salesforce CLI
         run: |
-          # Install Salesforce CLI here
-
-      - name: Login to Salesforce
+          npm install -g sfdx-cli@latest
+      - name: Authenticate with Salesforce CLI
         run: |
-          # Salesforce login steps here
-
-      - name: Check Deployment Status
-        id: deployment_status
+          sfdx auth:jwt:grant --clientid ${{ secrets.SF_CLIENT_ID }} --jwtkeyfile ${{ secrets.SF_JWT_KEY_FILE }} --username ${{ secrets.SF_USERNAME }} --setdefaultdevhubusername --setalias my-hub
+      - name: Check deployment status
+        id: check_status
         run: |
-          # Command to check deployment status
-          # Example: sfdx force:mdapi:deploy:report -i <deployment_id> --json
-          # Store the deployment status in an output variable
-          echo "::set-output name=status::success"  # Replace 'success' with actual status
-
-      - name: Wait for 5 minutes
-        run: sleep 300
-
-      - name: Check Deployment Status Again
-        if: steps.deployment_status.outputs.status != 'success'
-        run: |
-          # Command to check deployment status again if the previous check failed
-          # Store the deployment status in an output variable again if needed
-          echo "::set-output name=status::success"  # Replace 'success' with actual status
-
-      - name: Final Deployment Status
-        run: |
-          # Notify or perform any actions based on the final deployment status
-          echo "Deployment Status: ${{ steps.deployment_status.outputs.status }}"
+          deployment_status=$(sfdx force:data:soql:query --query "SELECT Id, Status, StartDate, CompletedDate, CreatedBy.Name FROM DeployRequest WHERE CreatedBy.Name='Subramanyam Kamath' ORDER BY CompletedDate DESC LIMIT 1" --usetoolingapi --json | jq -r '.result.records[0].Status')
+          echo "Deployment Status: $deployment_status"
+          if [ "$deployment_status" == "Failed" ]; then
+            echo "Deployment failed, checking again in 5 minutes"
+            exit 1
+          fi
+          if [ "$deployment_status" == "Succeeded" ]; then
+            echo "Deployment passed, scheduling job in Salesforce org"
+            sfdx force:apex:execute -u my-hub -f ./path/to/apex-script
+          fi
