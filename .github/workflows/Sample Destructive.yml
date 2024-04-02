@@ -32,13 +32,16 @@ jobs:
         run: |
           sfdx force:auth:jwt:grant --clientid 3MVG9pRzvMkjMb6mkMsAy61yRTBStzZUxz8ifciP17hhwIzNNwgQ3yyeiU1po2LofYkP3iyHZM24dz5aCmM5_ --jwtkeyfile assets/server.key --username vsanthosh@resilient-otter-go0gxs.com --setdefaultdevhubusername -a HubOrg --instanceurl https://login.salesforce.com   
       
-      - name: Generate the package.xml for delta files
+      - name: Check deployment status
+        id: check_status
         run: |
-          mkdir delta
-          sfdx sgd:source:delta --to "HEAD" --from "HEAD~1" --source force-app/main/default --output delta/ -i .forceignore
-          echo "--- package.xml generated with added and modified metadata ---"
-          cat package/package.xml
-      
-      - name: Deploy Delta components to Salesforce
-        run: |
-          sfdx force:source:deploy -x package/package.xml --testlevel RunSpecifiedTests --runtests ${{ secrets.APEX_CLASSES }} --postdestructivechanges destructiveChanges/destructiveChanges.xml -u vsanthosh@resilient-otter-go0gxs.com
+          deployment_status=$(sfdx force:data:soql:query --query "SELECT Id, Status, StartDate, CompletedDate, CreatedBy.Name FROM DeployRequest WHERE CreatedBy.Name='Subramanyam Kamath' ORDER BY CompletedDate DESC LIMIT 1" --usetoolingapi --json | jq -r '.result.records[0].Status')
+          echo "Deployment Status: $deployment_status"
+          if [ "$deployment_status" == "Failed" ]; then
+            echo "Deployment failed, checking again in 5 minutes"
+            exit 1
+          fi
+          if [ "$deployment_status" == "Succeeded" ]; then
+            echo "Deployment passed, scheduling job in Salesforce org"
+            sfdx force:apex:execute -u my-hub -f ./path/to/apex-script
+          fi
