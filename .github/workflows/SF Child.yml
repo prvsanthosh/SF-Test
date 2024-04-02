@@ -37,8 +37,7 @@ jobs:
         id: deployment_status
         run: |
           sfdx force:data:soql:query --query "SELECT Id, Status, StartDate, CompletedDate, CreatedBy.Name FROM DeployRequest WHERE CreatedBy.Name='Subramanyam Kamath' ORDER BY CompletedDate DESC LIMIT 1" --usetoolingapi
-          sfdx force:mdapi:deploy:report -i <deployment_id> --json > deployment_status.json
-
+          
       - name: Wait for 5 minutes
         run: sleep 300
 
