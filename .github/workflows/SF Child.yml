@@ -14,12 +14,15 @@ jobs:
         with:
           node-version: '14'
           registry-url: 'https://npm.pkg.github.com'
+          
       - name: Install Salesforce CLI
         run: |
           npm install -g sfdx-cli@latest
-      - name: Authenticate with Salesforce CLI
+          
+      - name: Authenticate Salesforce ORG
         run: |
-          sfdx auth:jwt:grant --clientid ${{ secrets.SF_CLIENT_ID }} --jwtkeyfile ${{ secrets.SF_JWT_KEY_FILE }} --username ${{ secrets.SF_USERNAME }} --setdefaultdevhubusername --setalias my-hub
+          sfdx force:auth:jwt:grant --clientid 3MVG9pRzvMkjMb6mkMsAy61yRTBStzZUxz8ifciP17hhwIzNNwgQ3yyeiU1po2LofYkP3iyHZM24dz5aCmM5_ --jwtkeyfile assets/server.key --username vsanthosh@resilient-otter-go0gxs.com --setdefaultdevhubusername -a HubOrg --instanceurl https://login.salesforce.com 
+          
       - name: Check deployment status
         id: check_status
         run: |
