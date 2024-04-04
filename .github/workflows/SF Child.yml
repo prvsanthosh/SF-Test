@@ -1,32 +1,49 @@
-name: Deployment Status Check
-
+name: Deployment status
+run-name: ${{ github.actor }} is validating the Deployment on the ${{github.ref_name}}
 on: [push]
-
+  #schedule:
+    #- cron: '*/5 * * * *'  
+    
 jobs:
-  check-deployment-status:
-    runs-on: ubuntu-latest
+  Deployment-status-check-on-QA-org:
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    runs-on: devforce-ubuntu
+    environment: TA-FUEL-QA-Credentials
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Salesforce CLI
-        uses: actions/setup-node@v3
+      - uses: devforce/setup-node@v3.5.1
         with:
-          node-version: '14'
-          registry-url: 'https://npm.pkg.github.com'
+          node-version: "18"
+
+      - name: "Checkout source code"
+        uses: devforce/checkout@v3
+        with:
+          fetch-depth: 0
           
-      - name: Install Salesforce CLI
+      - name: "Install Salesforce CLI"
         run: |
-          npm install -g sfdx-cli@latest
+          wget https://developer.salesforce.com/media/salesforce-cli/sfdx/channels/stable/sfdx-linux-x64.tar.xz
+          mkdir ~/sfdx
+          tar xJf sfdx-linux-x64.tar.xz -C ~/sfdx --strip-components 1
+          echo "$HOME/sfdx/bin" >> $GITHUB_PATH
+          ~/sfdx/bin/sfdx version
+
+      - name: "Installing sfdx git delta"
+        run: |
+          echo y | sfdx plugins:install sfdx-git-delta
+          sfdx plugins
           
+      - name: Decrypt the server.key.enc file & store inside assets folder
+        run: openssl enc -nosalt -aes-256-cbc -d -in ${{secrets.CONTEXT_JWT_KEY_FILE_ENC}} -out ${{secrets.CONTEXT_JWT_KEY_FILE}} -base64 -K ${{secrets.CONTEXT_DECRYPTION_KEY}} -iv ${{secrets.CONTEXT_DECRYPTION_IV}}
+
+
       - name: Authenticate Salesforce ORG
         run: |
-          sfdx force:auth:jwt:grant --clientid 3MVG9pRzvMkjMb6mkMsAy61yRTBStzZUxz8ifciP17hhwIzNNwgQ3yyeiU1po2LofYkP3iyHZM24dz5aCmM5_ --jwtkeyfile assets/server.key --username vsanthosh@resilient-otter-go0gxs.com --setdefaultdevhubusername -a HubOrg --instanceurl https://login.salesforce.com 
-          
+          sf auth jwt grant --client-id ${{secrets.CONTEXT_HUB_CONSUMER_KEY}} --jwt-key-file ${{secrets.CONTEXT_JWT_KEY_FILE}} --username ${{secrets.CONTEXT_HUB_SFDX_USER}} --set-default-dev-hub -a TaQA
+
       - name: Check deployment status
         id: check_status
         run: |
-          deployment_status=$(sfdx force:data:soql:query --query "SELECT Id, Status, StartDate, CompletedDate, CreatedBy.Name FROM DeployRequest WHERE CreatedBy.Name='Subramanyam Kamath' ORDER BY CompletedDate DESC LIMIT 1" --usetoolingapi --json | jq -r '.result.records[0].Status')
+          deployment_status=$(sfdx force:data:soql:query --target-org TaQA --query "SELECT Id, Status, StartDate, CompletedDate, CreatedBy.Name FROM DeployRequest WHERE CreatedBy.Name='Subramanyam Kamath' ORDER BY CompletedDate DESC LIMIT 1" --usetoolingapi --json | jq -r '.result.records[0].Status')
           echo "Deployment Status: $deployment_status"
           if [ "$deployment_status" == "Failed" ]; then
             echo "Deployment failed, checking again in 5 minutes"
@@ -34,5 +51,5 @@ jobs:
           fi
           if [ "$deployment_status" == "Succeeded" ]; then
             echo "Deployment passed, scheduling job in Salesforce org"
-            sfdx force:apex:execute -u my-hub -f ./path/to/apex-script
+            echo "System.schedule('Integration Services Retry Schedule Job', '0 0 * * * ?', new sf_lms_IntegrationServiceRetrySchedule(20));" | sfdx force:apex:execute --target-org TaQA
           fi
